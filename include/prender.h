@@ -17,6 +17,49 @@ typedef struct {
 #define PR_DARK_GRAY (PR_Color){0.10f, 0.10f, 0.10f, 1.00f} // Nice dark canvas
 #define PR_CHARCOAL (PR_Color){0.15f, 0.15f, 0.18f, 1.00f}  // Modern background
 
+typedef struct {
+  unsigned int id;
+} PR_Shader;
+
+/**
+ * @brief Reads the entire contents of a shader file into a dynamically
+ * allocated string.
+ *
+ * @param *filepath The path to the shader file on disk.
+ *
+ * @return A null-terminated string containing the file contents, or NULL if the
+ * file fails to open.
+ *
+ * @note The caller is responsible for freeing the returned memory buffer.
+ */
+char *PR_ReadShaderFile(const char *filepath);
+
+/**
+ * @brief Loads, compiles, and links a vertex and fragment shader into a
+ * complete OpenGL shader program.
+ *
+ * @param *vertPath The path to the vertex shader file (.vert).
+ * @param *fragPath The path to the fragment shader file (.frag).
+ *
+ * @return A PR_Shader struct containing the linked program ID, or an ID of 0 if
+ * compilation or linking fails.
+ */
+PR_Shader PR_LoadShader(const char *vertPath, const char *fragPath);
+
+/**
+ * @brief Activates the specified shader program for subsequent rendering draw
+ * calls.
+ *
+ * @param shader The PR_Shader program target to activate.
+ */
+void PR_UseShader(PR_Shader shader);
+
+/**
+ * @brief Deletes the specified shader program from GPU memory.
+ *
+ * @param shader The PR_Shader program target to destroy.
+ */
+void PR_DeleteShader(PR_Shader shader);
 // Global deltatime
 extern float PR_DeltaTime;
 

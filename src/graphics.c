@@ -1,91 +1,114 @@
 #include "prender.h"
 #include <glad/glad.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-static unsigned int global_shader_program = 0;
+static PR_Shader quad_shader = {0};
+static PR_Shader circle_shader = {0};
+
 static unsigned int quad_vao = 0;
 static unsigned int quad_vbo = 0;
 
-static const char *default_vert =
-    "#version 330 core\n"
-    "layout (location = 0) in vec2 aPos;\n"
-    "uniform vec3 u_proj_r0;\n"
-    "uniform vec3 u_proj_r1;\n"
-    "uniform vec2 u_position;\n"
-    "uniform vec2 u_size;\n"
-    "void main() {\n"
-    "   vec2 world_pos = u_position + (aPos * u_size);\n"
-    "   float x = dot(u_proj_r0, vec3(world_pos, 1.0));\n"
-    "   float y = dot(u_proj_r1, vec3(world_pos, 1.0));\n"
-    "   gl_Position = vec4(x, y, 0.0, 1.0);\n"
-    "}\n";
+char *PR_ReadShaderFile(const char *filepath) {
+  FILE *file = fopen(filepath, "rb");
+  if (!file) {
+    fprintf(stderr, "[ERROR]: Failed to open shader: %s\n", filepath);
+    return NULL;
+  }
 
-static const char *default_frag = "#version 330 core\n"
-                                  "out vec4 FragColor;\n"
-                                  "uniform vec4 u_color;\n"
-                                  "void main() {\n"
-                                  "   FragColor = u_color;\n"
-                                  "}\n";
+  fseek(file, 0, SEEK_END);
+  long length = ftell(file);
+  fseek(file, 0, SEEK_SET);
 
-static unsigned int circle_shader_program = 0;
+  char *buffer = (char *)malloc(length + 1);
+  if (!buffer) {
+    fprintf(stderr,
+            "[PRender Error] Out of memory allocating shader buffer.\n");
+    fclose(file);
+    return NULL;
+  }
 
-static const char *circle_vert =
-    "#version 330 core\n"
-    "layout (location = 0) in vec2 aPos;\n"
-    "out vec2 v_uv;\n"
-    "uniform vec3 u_proj_r0;\n"
-    "uniform vec3 u_proj_r1;\n"
-    "uniform vec2 u_position;\n" // This will now be the TRUE center!
-    "uniform float u_radius;\n"
-    "void main() {\n"
-    "   v_uv = aPos;\n"
-    "   \n"
-    "   // Shift the 0.0 to 1.0 vertex coordinate space by -0.5 \n"
-    "   // so that (0,0) sits exactly in the center of the geometry\n"
-    "   vec2 centered_offset = aPos - vec2(0.5);\n"
-    "   vec2 world_pos = u_position + (centered_offset * (u_radius * 2.0));\n"
-    "   \n"
-    "   float x = dot(u_proj_r0, vec3(world_pos, 1.0));\n"
-    "   float y = dot(u_proj_r1, vec3(world_pos, 1.0));\n"
-    "   gl_Position = vec4(x, y, 0.0, 1.0);\n"
-    "}\n";
+  size_t bytesRead = fread(buffer, 1, length, file);
+  buffer[bytesRead] = '\0';
 
-static const char *circle_frag =
-    "#version 330 core\n"
-    "in vec2 v_uv;\n"
-    "out vec4 FragColor;\n"
-    "uniform vec4 u_color;\n"
-    "void main() {\n"
-    "   // Normalize local space relative to shape center\n"
-    "   vec2 local_pos = (v_uv * 2.0) - vec2(1.0);\n"
-    "   float distance = length(local_pos);\n"
-    "   \n"
-    "   float fade = fwidth(distance);\n"
-    "   float alpha = 1.0 - smoothstep(1.0 - fade, 1.0, distance);\n"
-    "   \n"
-    "   if (distance > 1.0) discard;\n"
-    "   \n"
-    "   FragColor = vec4(u_color.rgb, u_color.a * alpha);\n"
-    "}\n";
+  fclose(file);
+  return buffer;
+}
+
+PR_Shader PR_LoadShader(const char *vertPath, const char *fragPath) {
+  PR_Shader program = {0};
+  int success;
+  char infoLog[512];
+
+  char *vertSource = PR_ReadShaderFile(vertPath);
+  char *fragSource = PR_ReadShaderFile(fragPath);
+  if (!vertSource || !fragSource)
+    return program;
+
+  unsigned int vertex = glCreateShader(GL_VERTEX_SHADER);
+  glShaderSource(vertex, 1, (const char **)&vertSource, NULL);
+  glCompileShader(vertex);
+
+  glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
+  if (!success) {
+    glGetShaderInfoLog(vertex, 512, NULL, infoLog);
+    fprintf(stderr, "[PRender GLSL Error] Vertex compile failure (%s):\n%s\n",
+            vertPath, infoLog);
+  }
+
+  unsigned int fragment = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(fragment, 1, (const char **)&fragSource, NULL);
+  glCompileShader(fragment);
+
+  glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
+  if (!success) {
+    glGetShaderInfoLog(fragment, 512, NULL, infoLog);
+    fprintf(stderr, "[PRender GLSL Error] Fragment compile failure (%s):\n%s\n",
+            fragPath, infoLog);
+  }
+
+  program.id = glCreateProgram();
+  glAttachShader(program.id, vertex);
+  glAttachShader(program.id, fragment);
+  glLinkProgram(program.id);
+
+  glGetProgramiv(program.id, GL_LINK_STATUS, &success);
+  if (!success) {
+    glGetProgramInfoLog(program.id, 512, NULL, infoLog);
+    fprintf(stderr, "[PRender GLSL Link Error]:\n%s\n", infoLog);
+  }
+
+  glDeleteShader(vertex);
+  glDeleteShader(fragment);
+  free(vertSource);
+  free(fragSource);
+
+  return program;
+}
+
+void PR_UseShader(PR_Shader shader) { glUseProgram(shader.id); }
+
+void PR_DeleteShader(PR_Shader shader) { glDeleteProgram(shader.id); }
 
 bool PR_InitRenderer(void) {
-  global_shader_program = PR_CreateShader(default_vert, default_frag);
-  if (global_shader_program == 0)
+  quad_shader = PR_LoadShader("src/shaders/quad.vert", "src/shaders/quad.frag");
+  if (quad_shader.id == 0)
     return false;
 
-  // FIXED: Compile the circle program too!
-  circle_shader_program = PR_CreateShader(circle_vert, circle_frag);
-  if (circle_shader_program == 0)
+  circle_shader =
+      PR_LoadShader("src/shaders/circle.vert", "src/shaders/circle.frag");
+  if (circle_shader.id == 0)
     return false;
 
   float vertices[] = {
-      0.0f, 1.0f, // TOP LEFT
-      0.0f, 0.0f, // BOTTOM LEFT
-      1.0f, 0.0f, // BOTTOM RIGHT
+      0.0f, 1.0f, 0.0f, 1.0f, // TOP LEFT
+      0.0f, 0.0f, 0.0f, 0.0f, // BOTTOM LEFT
+      1.0f, 0.0f, 1.0f, 0.0f, // BOTTOM RIGHT
 
-      0.0f, 1.0f, // TOP LEFT
-      1.0f, 0.0f, // BOTTOM RIGHT
-      1.0f, 1.0f, // TOP RIGHT
+      0.0f, 1.0f, 0.0f, 1.0f, // TOP LEFT
+      1.0f, 0.0f, 1.0f, 0.0f, // BOTTOM RIGHT
+      1.0f, 1.0f, 1.0f, 1.0f, // TOP RIGHT
   };
 
   glGenVertexArrays(1, &quad_vao);
@@ -96,7 +119,11 @@ bool PR_InitRenderer(void) {
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);
+
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
+                        (void *)(2 * sizeof(float)));
 
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
@@ -106,10 +133,10 @@ bool PR_InitRenderer(void) {
 
 void PR_DrawQuad(PR_Window *window, PM_Vec2 position, PM_Vec2 size,
                  PR_Color color) {
-  if (!window)
+  if (!window || quad_shader.id == 0)
     return;
 
-  glUseProgram(global_shader_program);
+  PR_UseShader(quad_shader);
 
   float width = (float)window->width;
   float height = (float)window->height;
@@ -117,17 +144,16 @@ void PR_DrawQuad(PR_Window *window, PM_Vec2 position, PM_Vec2 size,
   PM_Vec3 proj_r0 = {2.0f / width, 0.0f, -1.0f};
   PM_Vec3 proj_r1 = {0.0f, -2.0f / height, 1.0f};
 
-  glUniform3f(glGetUniformLocation(global_shader_program, "u_proj_r0"),
-              proj_r0.x, proj_r0.y, proj_r0.z);
-  glUniform3f(glGetUniformLocation(global_shader_program, "u_proj_r1"),
-              proj_r1.x, proj_r1.y, proj_r1.z);
+  glUniform3f(glGetUniformLocation(quad_shader.id, "u_proj_r0"), proj_r0.x,
+              proj_r0.y, proj_r0.z);
+  glUniform3f(glGetUniformLocation(quad_shader.id, "u_proj_r1"), proj_r1.x,
+              proj_r1.y, proj_r1.z);
 
-  glUniform2f(glGetUniformLocation(global_shader_program, "u_position"),
-              position.x, position.y);
-  glUniform2f(glGetUniformLocation(global_shader_program, "u_size"), size.x,
-              size.y);
-  glUniform4f(glGetUniformLocation(global_shader_program, "u_color"), color.r,
-              color.g, color.b, color.a);
+  glUniform2f(glGetUniformLocation(quad_shader.id, "u_position"), position.x,
+              position.y);
+  glUniform2f(glGetUniformLocation(quad_shader.id, "u_size"), size.x, size.y);
+  glUniform4f(glGetUniformLocation(quad_shader.id, "u_color"), color.r, color.g,
+              color.b, color.a);
 
   glBindVertexArray(quad_vao);
   glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -136,27 +162,27 @@ void PR_DrawQuad(PR_Window *window, PM_Vec2 position, PM_Vec2 size,
 
 void PR_DrawCircle(PR_Window *window, PM_Vec2 position, float radius,
                    PR_Color color) {
-  if (!window)
+  if (!window || circle_shader.id == 0)
     return;
 
-  glUseProgram(circle_shader_program);
+  PR_UseShader(circle_shader);
 
   float width = (float)window->width;
   float height = (float)window->height;
 
-  // FIXED: Match the exact projection row layout used in PR_DrawQuad
   PM_Vec3 proj_r0 = {2.0f / width, 0.0f, -1.0f};
   PM_Vec3 proj_r1 = {0.0f, -2.0f / height, 1.0f};
 
-  glUniform3f(glGetUniformLocation(circle_shader_program, "u_proj_r0"),
-              proj_r0.x, proj_r0.y, proj_r0.z);
-  glUniform3f(glGetUniformLocation(circle_shader_program, "u_proj_r1"),
-              proj_r1.x, proj_r1.y, proj_r1.z);
+  glUniform3f(glGetUniformLocation(circle_shader.id, "u_proj_r0"), proj_r0.x,
+              proj_r0.y, proj_r0.z);
+  glUniform3f(glGetUniformLocation(circle_shader.id, "u_proj_r1"), proj_r1.x,
+              proj_r1.y, proj_r1.z);
 
-  glUniform2f(glGetUniformLocation(circle_shader_program, "u_position"),
-              position.x, position.y);
-  glUniform1f(glGetUniformLocation(circle_shader_program, "u_radius"), radius);
-  glUniform4f(glGetUniformLocation(circle_shader_program, "u_color"), color.r,
+  glUniform2f(glGetUniformLocation(circle_shader.id, "u_position"), position.x,
+              position.y);
+  glUniform2f(glGetUniformLocation(circle_shader.id, "u_size"), radius * 2.0f,
+              radius * 2.0f);
+  glUniform4f(glGetUniformLocation(circle_shader.id, "u_color"), color.r,
               color.g, color.b, color.a);
 
   glBindVertexArray(quad_vao);
@@ -169,8 +195,7 @@ void PR_CleanRenderer(void) {
     glDeleteVertexArrays(1, &quad_vao);
   if (quad_vbo)
     glDeleteBuffers(1, &quad_vbo);
-  if (global_shader_program)
-    glDeleteProgram(global_shader_program);
-  if (circle_shader_program)
-    glDeleteProgram(circle_shader_program);
+
+  PR_DeleteShader(quad_shader);
+  PR_DeleteShader(circle_shader);
 }

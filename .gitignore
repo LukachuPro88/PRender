@@ -13,3 +13,7 @@ install_manifest.txt
 *.o
 *.d
 a.out
+
+# Ignore language server diagnostic and build setup caches
+.cache/
+compile_commands.json
