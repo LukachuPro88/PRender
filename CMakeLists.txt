@@ -3,29 +3,29 @@ project(PRender C)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Find GLFW dependency natively
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GLFW REQUIRED glfw3)
 
-# Define your source file configurations
 add_library(prender STATIC 
     src/window.c 
     src/graphics.c
     src/glad/src/glad.c
 )
 
-# Expose include targets
 target_include_directories(prender PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/glad/include>
     $<INSTALL_INTERFACE:include>
 )
 
-# Link GLFW to PRender internally
 target_link_libraries(prender PRIVATE ${GLFW_LIBRARIES} m dl)
 
-# SYSTEM INSTALLATION RULES
+add_executable(engine_test test.c)
+
+target_link_libraries(engine_test PRIVATE prender ${GLFW_LIBRARIES} m dl)
+
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/shaders" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+
 install(TARGETS prender ARCHIVE DESTINATION lib)
 install(FILES include/prender.h DESTINATION include)

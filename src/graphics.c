@@ -92,12 +92,11 @@ void PR_UseShader(PR_Shader shader) { glUseProgram(shader.id); }
 void PR_DeleteShader(PR_Shader shader) { glDeleteProgram(shader.id); }
 
 bool PR_InitRenderer(void) {
-  quad_shader = PR_LoadShader("src/shaders/quad.vert", "src/shaders/quad.frag");
+  quad_shader = PR_LoadShader("shaders/quad.vert", "shaders/quad.frag");
   if (quad_shader.id == 0)
     return false;
 
-  circle_shader =
-      PR_LoadShader("src/shaders/circle.vert", "src/shaders/circle.frag");
+  circle_shader = PR_LoadShader("shaders/circle.vert", "shaders/circle.frag");
   if (circle_shader.id == 0)
     return false;
 

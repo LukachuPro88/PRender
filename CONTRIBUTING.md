@@ -48,6 +48,7 @@ Before submitting your updates, make sure your changes don't break existing rend
 cd build
 cmake ..
 make
+./engine_test
 ```
 
 ### 3. Submitting a Pull Request
