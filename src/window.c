@@ -150,3 +150,10 @@ unsigned int PR_CreateShader(const char *vertex_source,
 
   return program_id;
 }
+
+void PR_LockWindowSize(PR_Window *window) {
+  if (!window || !window->handle)
+    return;
+  glfwSetWindowSizeLimits(window->handle, window->width, window->height,
+                          window->width, window->height);
+}
