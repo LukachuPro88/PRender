@@ -207,4 +207,7 @@ void PR_DrawShape2D(PR_Window *window, const PM_Vec2 *vertices,
  */
 void PR_LockWindowSize(PR_Window *window);
 
+bool PR_GetKey(PR_Window *window, int key);
+bool PR_GetKeyDown(PR_Window *window, int key);
+
 #endif
