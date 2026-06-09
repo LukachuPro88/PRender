@@ -35,19 +35,15 @@ int main(void) {
     return -1;
   }
 
-  Ball ball = {
-      .position = {200.0f, 300.0f},
-      .velocity = {250.0f, -300.0f},
-      .radius = 25.0f,
-      .color = {1.0f, 0.0f, 0.0f, 1.0f} // Red
-  };
+  Ball ball = {.position = {200.0f, 300.0f},
+               .velocity = {250.0f, -300.0f},
+               .radius = 25.0f,
+               .color = {1.0f, 0.0f, 0.0f, 1.0f}};
 
-  Box box = {
-      .position = {500.0f, 100.0f},
-      .velocity = {0.0f, 350.0f},
-      .size = {60.0f, 60.0f},
-      .color = {1.0f, 1.0f, 1.0f, 1.0f} // White
-  };
+  Box box = {.position = {500.0f, 100.0f},
+             .velocity = {0.0f, 350.0f},
+             .size = {60.0f, 60.0f},
+             .color = {1.0f, 1.0f, 1.0f, 1.0f}};
 
   float gravity = 500.0f;
   float dt = 0.016f;
@@ -57,18 +53,21 @@ int main(void) {
     ball.position.x += ball.velocity.x * dt;
     ball.position.y += ball.velocity.y * dt;
 
-    if (ball.position.x - ball.radius < 0.0f) {
-      ball.position.x = ball.radius;
+    float ball_diameter = ball.radius * 2.0f;
+
+    if (ball.position.x < 0.0f) {
+      ball.position.x = 0.0f;
       ball.velocity.x *= -0.9f;
-    } else if (ball.position.x + ball.radius > WINDOW_WIDTH) {
-      ball.position.x = WINDOW_WIDTH - ball.radius;
+    } else if (ball.position.x + ball_diameter > WINDOW_WIDTH) {
+      ball.position.x = WINDOW_WIDTH - ball_diameter;
       ball.velocity.x *= -0.9f;
     }
-    if (ball.position.y - ball.radius < 0.0f) {
-      ball.position.y = ball.radius;
+
+    if (ball.position.y < 0.0f) {
+      ball.position.y = 0.0f;
       ball.velocity.y *= -0.9f;
-    } else if (ball.position.y + ball.radius > WINDOW_HEIGHT) {
-      ball.position.y = WINDOW_HEIGHT - ball.radius;
+    } else if (ball.position.y + ball_diameter > WINDOW_HEIGHT) {
+      ball.position.y = WINDOW_HEIGHT - ball_diameter;
       ball.velocity.y *= -0.9f;
     }
 
@@ -84,11 +83,8 @@ int main(void) {
     }
 
     PR_StartFrame((PR_Color){0.1f, 0.1f, 0.15f, 1.0f});
-
     PR_DrawQuad(window, box.position, box.size, box.color);
-
     PR_DrawCircle(window, ball.position, ball.radius, ball.color);
-
     PR_EndFrame(window);
   }
 
