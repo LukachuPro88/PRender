@@ -1,14 +1,15 @@
 #version 330 core
-out vec4 FragColor;
 in vec2 TexCoord;
+out vec4 FragColor;
+
+uniform vec4 u_color;
 
 void main() {
-  vec2 centerRelative = TexCoord - vec2(0.5, 0.5);
-  float distance = length(centerRelative);
+    vec2 uv = TexCoord * 2.0 - 1.0;
 
-  if (distance > 0.5) {
-    discard;
-  }
+    if (dot(uv, uv) > 1.0) {
+        discard;
+    }
 
-  FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    FragColor = u_color;
 }
