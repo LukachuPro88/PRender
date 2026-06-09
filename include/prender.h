@@ -3,12 +3,16 @@
 
 #include <pmath.h>
 #include <stdbool.h>
+#include <stddef.h>
+
+#define PR_WINDOWED 0
+#define PR_FULLSCREEN 1
 
 typedef struct {
-  float r;
-  float g;
-  float b;
-  float a;
+    float r;
+    float g;
+    float b;
+    float a;
 } PR_Color;
 
 #define PR_BLACK (PR_Color){0.00f, 0.00f, 0.00f, 1.00f}
@@ -18,8 +22,14 @@ typedef struct {
 #define PR_CHARCOAL (PR_Color){0.15f, 0.15f, 0.18f, 1.00f}  // Modern background
 
 typedef struct {
-  unsigned int id;
+    unsigned int id;
 } PR_Shader;
+
+typedef struct {
+    unsigned int id;
+    int width;
+    int height;
+} PR_Texture;
 
 /**
  * @brief Reads the entire contents of a shader file into a dynamically
@@ -41,8 +51,8 @@ char *PR_ReadShaderFile(const char *filepath);
  * @param *vertPath The path to the vertex shader file (.vert).
  * @param *fragPath The path to the fragment shader file (.frag).
  *
- * @return A PR_Shader struct containing the linked program ID, or an ID of 0 if
- * compilation or linking fails.
+ * @return A PR_Shader struct containing the linked program ID, or an ID of 0
+ * if compilation or linking fails.
  */
 PR_Shader PR_LoadShader(const char *vertPath, const char *fragPath);
 
@@ -66,12 +76,24 @@ extern float PR_DeltaTime;
 typedef struct GLFWwindow GLFWwindow;
 
 typedef struct {
-  GLFWwindow *handle;
-  unsigned int width;
-  unsigned int height;
-  const char *title;
-  PM_Vec2 position;
+    void *handle;
+    unsigned int width;
+    unsigned int height;
+    const char *title;
+    PM_Vec2 position;
+    unsigned int windowed_width;
+    unsigned int windowed_height;
+    PM_Vec2 windowed_position;
+    bool is_fullscreen;
 } PR_Window;
+
+PR_Texture PR_LoadTexture(const char *filepath);
+void PR_DeleteTexture(PR_Texture texture);
+
+void PR_DrawSprite(PR_Window *window, PR_Texture texture, PM_Vec2 position,
+                   PM_Vec2 size, PR_Color color);
+
+void PR_SetFullscreen(PR_Window *window, bool fullscreen);
 
 /**
  * @brief Initializes and creates a PR_Window.
@@ -82,11 +104,14 @@ typedef struct {
  * @param height The height for the window.
  * @param *title The title for the window.
  * @param position The windows position as PM_Vec2.
+ * @param flags Flags for window initialization.
+ *
+ * @note if you set flags to 0 it will use PR_WINDOWED
  *
  * @return The created window
  */
 PR_Window *PR_InitWindow(const unsigned width, const unsigned height,
-                         const char *title, const PM_Vec2 position);
+                         const char *title, const PM_Vec2 position, int flags);
 
 /**
  * @brief Kills the given window.
@@ -163,6 +188,17 @@ void PR_DrawQuad(PR_Window *window, PM_Vec2 position, PM_Vec2 size,
  */
 void PR_DrawCircle(PR_Window *window, PM_Vec2 position, float radius,
                    PR_Color color);
+
+/**
+ * @brief Draws a custom 2D shape defined by an array of vertices.
+ *
+ * @param *window The window context to get dimensions from.
+ * @param *vertices An array of vectors defining each point of the shape.
+ * @param vertex_count The number of points in the vertices array.
+ * @param color The PR_Color used to fill the shape.
+ */
+void PR_DrawShape2D(PR_Window *window, const PM_Vec2 *vertices,
+                    size_t vertex_count, PR_Color color);
 
 /**
  * @brief Locks the window size to the size set while initialization.

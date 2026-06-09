@@ -7,91 +7,116 @@
 #define WINDOW_HEIGHT 600
 
 typedef struct {
-  PM_Vec2 position;
-  PM_Vec2 velocity;
-  float radius;
-  PR_Color color;
+    PM_Vec2 position;
+    PM_Vec2 velocity;
+    float radius;
+    PR_Color color;
 } Ball;
 
 typedef struct {
-  PM_Vec2 position;
-  PM_Vec2 velocity;
-  PM_Vec2 size;
-  PR_Color color;
+    PM_Vec2 position;
+    PM_Vec2 velocity;
+    PM_Vec2 size;
+    PR_Color color;
 } Box;
 
 int main(void) {
-  PM_Vec2 win_pos = {100.0f, 100.0f};
-  PR_Window *window = PR_InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT,
-                                    "PRender Engine Test", win_pos);
-  if (!window) {
-    fprintf(stderr, "Failed to initialize application window.\n");
-    return -1;
-  }
+    PM_Vec2 win_pos = {100.0f, 100.0f};
+    PR_Window *window = PR_InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT,
+                                      "PRender Engine Test", win_pos, 0);
+    if (!window) {
+        fprintf(stderr, "Failed to initialize application window.\n");
+        return -1;
+    }
 
-  PR_LockWindowSize(window);
+    PR_LockWindowSize(window);
 
-  if (!PR_InitRenderer()) {
-    fprintf(stderr, "Failed to initialize renderer or load shaders.\n");
+    if (!PR_InitRenderer()) {
+        fprintf(stderr, "Failed to initialize renderer or load shaders.\n");
+        PR_KillWindow(window);
+        return -1;
+    }
+
+    Ball ball = {.position = {200.0f, 300.0f},
+                 .velocity = {250.0f, -300.0f},
+                 .radius = 25.0f,
+                 .color = {1.0f, 0.0f, 0.0f, 1.0f}};
+
+    Box box = {.position = {500.0f, 100.0f},
+               .velocity = {0.0f, 350.0f},
+               .size = {60.0f, 60.0f},
+               .color = {1.0f, 1.0f, 1.0f, 1.0f}};
+
+    PM_Vec2 pentagon[] = {{400.0f, 200.0f},
+                          {480.0f, 260.0f},
+                          {450.0f, 350.0f},
+                          {350.0f, 350.0f},
+                          {320.0f, 260.0f}};
+    size_t pentagon_sides = 5;
+    PR_Color pentagon_color = {0.0f, 1.0f, 0.0f, 1.0f};
+
+    // Load sprite asset
+    PR_Texture character_sprite = PR_LoadTexture("assets/character.png");
+    PM_Vec2 sprite_pos = {100.0f, 100.0f};
+    PM_Vec2 sprite_size = {64.0f, 64.0f};
+
+    float gravity = 500.0f;
+    float dt = 0.016f;
+
+    // Works
+    // PR_SetFullscreen(window, true);
+
+    while (!PR_WindowShouldClose(window)) {
+        ball.velocity.y += gravity * dt;
+        ball.position.x += ball.velocity.x * dt;
+        ball.position.y += ball.velocity.y * dt;
+
+        float ball_diameter = ball.radius * 2.0f;
+
+        if (ball.position.x < 0.0f) {
+            ball.position.x = 0.0f;
+            ball.velocity.x *= -0.9f;
+        } else if (ball.position.x + ball_diameter > WINDOW_WIDTH) {
+            ball.position.x = WINDOW_WIDTH - ball_diameter;
+            ball.velocity.x *= -0.9f;
+        }
+
+        if (ball.position.y < 0.0f) {
+            ball.position.y = 0.0f;
+            ball.velocity.y *= -0.9f;
+        } else if (ball.position.y + ball_diameter > WINDOW_HEIGHT) {
+            ball.position.y = WINDOW_HEIGHT - ball_diameter;
+            ball.velocity.y *= -0.9f;
+        }
+
+        box.velocity.y += gravity * dt;
+        box.position.y += box.velocity.y * dt;
+
+        if (box.position.y < 0.0f) {
+            box.position.y = 0.0f;
+            box.velocity.y *= -0.9f;
+        } else if (box.position.y + box.size.y > WINDOW_HEIGHT) {
+            box.position.y = WINDOW_HEIGHT - box.size.y;
+            box.velocity.y *= -0.9f;
+        }
+
+        PR_StartFrame((PR_Color){0.1f, 0.1f, 0.15f, 1.0f});
+        PR_DrawQuad(window, box.position, box.size, box.color);
+        PR_DrawCircle(window, ball.position, ball.radius, ball.color);
+        PR_DrawShape2D(window, pentagon, pentagon_sides, pentagon_color);
+
+        // Draw the sprite on screen
+        PR_DrawSprite(window, character_sprite, sprite_pos, sprite_size,
+                      PR_WHITE);
+
+        PR_EndFrame(window);
+    }
+
+    // Free GPU texture allocation
+    PR_DeleteTexture(character_sprite);
+
+    PR_CleanRenderer();
     PR_KillWindow(window);
-    return -1;
-  }
 
-  Ball ball = {.position = {200.0f, 300.0f},
-               .velocity = {250.0f, -300.0f},
-               .radius = 25.0f,
-               .color = {1.0f, 0.0f, 0.0f, 1.0f}};
-
-  Box box = {.position = {500.0f, 100.0f},
-             .velocity = {0.0f, 350.0f},
-             .size = {60.0f, 60.0f},
-             .color = {1.0f, 1.0f, 1.0f, 1.0f}};
-
-  float gravity = 500.0f;
-  float dt = 0.016f;
-
-  while (!PR_WindowShouldClose(window)) {
-    ball.velocity.y += gravity * dt;
-    ball.position.x += ball.velocity.x * dt;
-    ball.position.y += ball.velocity.y * dt;
-
-    float ball_diameter = ball.radius * 2.0f;
-
-    if (ball.position.x < 0.0f) {
-      ball.position.x = 0.0f;
-      ball.velocity.x *= -0.9f;
-    } else if (ball.position.x + ball_diameter > WINDOW_WIDTH) {
-      ball.position.x = WINDOW_WIDTH - ball_diameter;
-      ball.velocity.x *= -0.9f;
-    }
-
-    if (ball.position.y < 0.0f) {
-      ball.position.y = 0.0f;
-      ball.velocity.y *= -0.9f;
-    } else if (ball.position.y + ball_diameter > WINDOW_HEIGHT) {
-      ball.position.y = WINDOW_HEIGHT - ball_diameter;
-      ball.velocity.y *= -0.9f;
-    }
-
-    box.velocity.y += gravity * dt;
-    box.position.y += box.velocity.y * dt;
-
-    if (box.position.y < 0.0f) {
-      box.position.y = 0.0f;
-      box.velocity.y *= -0.9f;
-    } else if (box.position.y + box.size.y > WINDOW_HEIGHT) {
-      box.position.y = WINDOW_HEIGHT - box.size.y;
-      box.velocity.y *= -0.9f;
-    }
-
-    PR_StartFrame((PR_Color){0.1f, 0.1f, 0.15f, 1.0f});
-    PR_DrawQuad(window, box.position, box.size, box.color);
-    PR_DrawCircle(window, ball.position, ball.radius, ball.color);
-    PR_EndFrame(window);
-  }
-
-  PR_CleanRenderer();
-  PR_KillWindow(window);
-
-  return 0;
+    return 0;
 }
