@@ -171,4 +171,7 @@ void PR_DrawCircle(PR_Window *window, PM_Vec2 position, float radius,
  */
 void PR_LockWindowSize(PR_Window *window);
 
+bool PR_GetKey(PR_Window *window, int key);
+bool PR_GetKeyDown(PR_Window *window, int key);
+
 #endif

@@ -12,6 +12,21 @@ float PR_DeltaTime = 0.0f;
 // Last frame time to calculate delta time
 static double last_frame_time = 0.0f;
 
+// Cover standard ASCII and GLFW stuctural keys.
+static bool current_keys[350] = {false};
+
+static void PR_KeyCallback(GLFWwindow *handle, int key, int scancode,
+                           int action, int mods) {
+  if (key < 0 || key >= 350)
+    return;
+
+  if (action == GLFW_PRESS) {
+    current_keys[key] = true;
+  } else if (action == GLFW_RELEASE) {
+    current_keys[key] = false;
+  }
+}
+
 PR_Window *PR_InitWindow(const unsigned width, const unsigned height,
                          const char *title, const PM_Vec2 position) {
   if (!glfwInit()) {
@@ -65,6 +80,8 @@ PR_Window *PR_InitWindow(const unsigned width, const unsigned height,
   }
 
   glViewport(0, 0, width, height);
+
+  glfwSetKeyCallback(window->handle, PR_KeyCallback);
 
   return window;
 }
@@ -156,4 +173,16 @@ void PR_LockWindowSize(PR_Window *window) {
     return;
   glfwSetWindowSizeLimits(window->handle, window->width, window->height,
                           window->width, window->height);
+}
+
+bool PR_GetKey(PR_Window *window, int key) {
+  if (key < 0 || key >= 350)
+    return false;
+  return current_keys[key];
+}
+
+bool PR_GetKeyDown(PR_Window *window, int key) {
+  if (!window || !window->handle)
+    return false;
+  return glfwGetKey((GLFWwindow *)window->handle, key) == GLFW_PRESS;
 }
