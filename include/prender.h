@@ -163,4 +163,12 @@ void PR_DrawQuad(PR_Window *window, PM_Vec2 position, PM_Vec2 size,
  */
 void PR_DrawCircle(PR_Window *window, PM_Vec2 position, float radius,
                    PR_Color color);
+
+/**
+ * @brief Locks the window size to the size set while initialization.
+ *
+ * @param *window The window to lock the size.
+ */
+void PR_LockWindowSize(PR_Window *window);
+
 #endif

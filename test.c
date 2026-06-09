@@ -29,6 +29,8 @@ int main(void) {
     return -1;
   }
 
+  PR_LockWindowSize(window);
+
   if (!PR_InitRenderer()) {
     fprintf(stderr, "Failed to initialize renderer or load shaders.\n");
     PR_KillWindow(window);
